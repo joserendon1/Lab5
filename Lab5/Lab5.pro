@@ -5,7 +5,9 @@ CONFIG -= qt
 
 SOURCES += \
         main.cpp \
+        obstaculo.cpp \
         particula.cpp
 
 HEADERS += \
+    obstaculo.h \
     particula.h
