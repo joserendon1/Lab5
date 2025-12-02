@@ -24,7 +24,8 @@ public:
     void setPosicion(double x, double y);
     void desactivar() { activa = false; }
 
-    void actualizarPosicion(double dt);
+    virtual void actualizarPosicion(double dt);
+    virtual ~Particula() = default;
 };
 
 #endif
