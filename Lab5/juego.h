@@ -2,10 +2,13 @@
 #define JUEGO_H
 
 #include "entidad.h"
+#include <QObject>
 #include <vector>
 #include <optional>
 
-class Juego {
+class Juego : public QObject {
+    Q_OBJECT
+
 public:
     enum Estado {
         CONFIGURANDO_DISPARO,
@@ -14,44 +17,50 @@ public:
         JUEGO_TERMINADO
     };
 
-    Juego(double ancho = 1200, double alto = 600);
+    explicit Juego(double ancho = 1200, double alto = 600, QObject* parent = nullptr);
 
     // Getters
     Estado getEstado() const { return estado; }
     int getTurno() const { return turno; }
-    Entidad* getJugadorActual();
-    Entidad* getJugador1() { return jugadorActual == &jugador1 ? &jugador1 : &jugador2; }
-    Entidad* getJugador2() { return jugadorActual == &jugador1 ? &jugador2 : &jugador1; }
     double getAnchoEscenario() const { return anchoEscenario; }
     double getAltoEscenario() const { return altoEscenario; }
+    double getSueloY() const { return sueloY; }
+
+    Entidad* getJugadorActual();
+    Entidad* getJugador1() { return &jugador1; }
+    Entidad* getJugador2() { return &jugador2; }
+    Entidad* getJugador(int numero);
     Entidad* getProyectilActual();
 
-    // Métodos para mantener compatibilidad temporal
-    bool prepararDisparo(double angulo, double potencia, double masa = 10.0);
+    // Métodos de juego
+    bool prepararDisparo(double angulo, double potencia);
     void actualizar(double dt);
     void finalizarTurno();
 
-    // Métodos originales que necesitan mantenerse
+    // Configuración física
     void setGravedad(double g) { gravedad = g; }
     void setCoeficienteRestitucion(double cr) { coeficienteRestitucion = cr; }
 
+    // Estado del juego
     bool verificarFinJuego() const;
     Entidad* obtenerGanador();
 
-    // Para mantener compatibilidad con el dibujo
-    std::vector<Entidad>& getDefensasJugador1() { return defensasJugador1; }
-    std::vector<Entidad>& getDefensasJugador2() { return defensasJugador2; }
+    // Acceso a defensas para dibujo
+    const std::vector<Entidad>& getDefensasJugador1() const { return defensasJugador1; }
+    const std::vector<Entidad>& getDefensasJugador2() const { return defensasJugador2; }
 
-    // Método auxiliar para obtener jugador por número
-    Entidad* getJugador(int numero);
+private slots:
+    void cambiarTurnoAutomatico();
 
 private:
     // Estado del juego
-    double anchoEscenario, altoEscenario;
+    double anchoEscenario;
+    double altoEscenario;
+    double sueloY;
     int turno = 1;
     Estado estado = CONFIGURANDO_DISPARO;
 
-    // Entidades principales
+    // Entidades
     Entidad jugador1;
     Entidad jugador2;
     Entidad* jugadorActual;
@@ -71,6 +80,8 @@ private:
     bool verificarColisionConDefensas(Entidad& proyectil, int jugadorObjetivo);
     void manejarColisionDefensa(Entidad& proyectil, Entidad& defensa);
     void aplicarGravedad(Entidad& entidad, double dt);
+    bool verificarColisionConJugador(const Entidad& proyectil, Entidad& jugador);
+    void empujarProyectilFueraDeDefensas(Entidad& proyectil, int jugadorObjetivo);
 };
 
 #endif

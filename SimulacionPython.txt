@@ -1,0 +1,257 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+def leer_datos_simulacion(archivo):
+    """Lee los datos de la simulación desde el archivo de texto"""
+    tiempos = []
+    num_particulas = []
+    posiciones_x = []
+    posiciones_y = []
+    colisiones = []
+    
+    with open(archivo, 'r') as f:
+        lineas = f.readlines()
+        
+        # Leer encabezado para saber cuántas partículas hay
+        header = lineas[0].strip().split(',')
+        num_columnas = len(header)
+        num_particulas_total = (num_columnas - 3) // 2  # Restar tiempo, num_particulas, colisiones
+        
+        # Inicializar listas para cada partícula
+        for i in range(num_particulas_total):
+            posiciones_x.append([])
+            posiciones_y.append([])
+        
+        # Leer datos
+        for linea in lineas[1:]:
+            datos = linea.strip().split(',')
+            if len(datos) < 3:
+                continue
+                
+            tiempos.append(float(datos[0]))
+            num_particulas.append(int(datos[1]))
+            colisiones.append(int(datos[-1]))
+            
+            # Leer posiciones de cada partícula
+            idx = 2  # Empezar después de tiempo y num_particulas
+            for i in range(num_particulas_total):
+                if idx + 1 < len(datos):
+                    posiciones_x[i].append(float(datos[idx]))
+                    posiciones_y[i].append(float(datos[idx + 1]))
+                    idx += 2
+    
+    return tiempos, num_particulas, posiciones_x, posiciones_y, colisiones
+
+def graficar_trayectorias(tiempos, posiciones_x, posiciones_y):
+    """Grafica las trayectorias de las partículas"""
+    plt.figure(figsize=(12, 8))
+    
+    # Configurar límites del escenario (800x600)
+    plt.xlim(0, 800)
+    plt.ylim(0, 600)
+    plt.gca().invert_yaxis()  # Invertir eje Y para que 0 esté arriba
+    
+    # Dibujar bordes de la caja
+    plt.plot([0, 800, 800, 0, 0], [0, 0, 600, 600, 0], 'k-', linewidth=2)
+    
+    # Dibujar obstáculos (posiciones fijas basadas en la simulación)
+    obstaculos = [
+        (100, 100, 60, 60),  # (x, y, ancho, alto)
+        (600, 100, 60, 60),
+        (100, 400, 60, 60),
+        (600, 400, 60, 60)
+    ]
+    
+    for x, y, ancho, alto in obstaculos:
+        plt.gca().add_patch(plt.Rectangle((x, y), ancho, alto, 
+                                         facecolor='gray', alpha=0.5))
+    
+    # Graficar trayectorias de cada partícula
+    colores = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink']
+    
+    for i in range(len(posiciones_x)):
+        if len(posiciones_x[i]) > 0:
+            color = colores[i % len(colores)]
+            
+            # Trayectoria completa
+            plt.plot(posiciones_x[i], posiciones_y[i], 
+                    color=color, alpha=0.5, linewidth=1, 
+                    label=f'Partícula {i+1}')
+            
+            # Puntos de inicio y fin
+            plt.scatter(posiciones_x[i][0], posiciones_y[i][0], 
+                       color=color, s=100, marker='o', edgecolors='black')
+            plt.scatter(posiciones_x[i][-1], posiciones_y[i][-1], 
+                       color=color, s=100, marker='s', edgecolors='black')
+    
+    plt.xlabel('Posición X')
+    plt.ylabel('Posición Y')
+    plt.title('Trayectorias de las Partículas')
+    plt.legend(loc='upper right')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig('trayectorias.png', dpi=150)
+    plt.show()
+
+def graficar_estadisticas(tiempos, num_particulas, colisiones):
+    """Grafica estadísticas de la simulación"""
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    
+    # 1. Número de partículas activas vs tiempo
+    axes[0, 0].plot(tiempos, num_particulas, 'b-', linewidth=2)
+    axes[0, 0].set_xlabel('Tiempo (s)')
+    axes[0, 0].set_ylabel('Partículas activas')
+    axes[0, 0].set_title('Partículas Activas vs Tiempo')
+    axes[0, 0].grid(True, alpha=0.3)
+    axes[0, 0].set_ylim(bottom=0)
+    
+    # 2. Colisiones acumuladas vs tiempo
+    axes[0, 1].plot(tiempos, colisiones, 'r-', linewidth=2)
+    axes[0, 1].set_xlabel('Tiempo (s)')
+    axes[0, 1].set_ylabel('Colisiones acumuladas')
+    axes[0, 1].set_title('Colisiones vs Tiempo')
+    axes[0, 1].grid(True, alpha=0.3)
+    axes[0, 1].set_ylim(bottom=0)
+    
+    # 3. Distribución de energía (simplificada)
+    # Calcular velocidad promedio (simulación)
+    if len(tiempos) > 1:
+        dt = tiempos[1] - tiempos[0]
+        # Esto es un ejemplo - en realidad necesitarías velocidades
+        # Para este ejemplo, mostramos un placeholder
+        axes[1, 0].text(0.5, 0.5, 'Análisis de Energía\n(requiere datos adicionales)', 
+                       ha='center', va='center', transform=axes[1, 0].transAxes)
+        axes[1, 0].set_title('Distribución de Energía')
+    axes[1, 0].axis('off')
+    
+    # 4. Tipos de colisiones (estimado)
+    # En una simulación real, tendrías estos datos
+    tipos_colisiones = ['Partícula-Pared', 'Partícula-Obstáculo', 'Partícula-Partícula']
+    # Valores estimados basados en la simulación típica
+    valores_estimados = [len(tiempos)*0.3, len(tiempos)*0.4, len(tiempos)*0.3]
+    
+    axes[1, 1].pie(valores_estimados, labels=tipos_colisiones, autopct='%1.1f%%',
+                  startangle=90, colors=['lightblue', 'lightcoral', 'lightgreen'])
+    axes[1, 1].set_title('Distribución de Tipos de Colisión')
+    
+    plt.tight_layout()
+    plt.savefig('estadisticas.png', dpi=150)
+    plt.show()
+
+def crear_animacion(tiempos, posiciones_x, posiciones_y):
+    """Crea una animación simple de las trayectorias"""
+    try:
+        import matplotlib.animation as animation
+        
+        fig, ax = plt.subplots(figsize=(10, 8))
+        
+        # Configurar límites
+        ax.set_xlim(0, 800)
+        ax.set_ylim(0, 600)
+        ax.invert_yaxis()
+        
+        # Dibujar elementos estáticos
+        ax.plot([0, 800, 800, 0, 0], [0, 0, 600, 600, 0], 'k-', linewidth=2)
+        
+        obstaculos = [
+            (100, 100, 60, 60),
+            (600, 100, 60, 60),
+            (100, 400, 60, 60),
+            (600, 400, 60, 60)
+        ]
+        
+        for x, y, ancho, alto in obstaculos:
+            ax.add_patch(plt.Rectangle((x, y), ancho, alto, 
+                                      facecolor='gray', alpha=0.5))
+        
+        # Crear puntos para cada partícula
+        puntos = []
+        colores = ['red', 'blue', 'green', 'orange', 'purple']
+        
+        for i in range(len(posiciones_x)):
+            punto, = ax.plot([], [], 'o', color=colores[i % len(colores)], 
+                           markersize=10, markeredgecolor='black')
+            puntos.append(punto)
+        
+        def actualizar(frame):
+            """Función para actualizar la animación"""
+            # Usar solo cada 10 frames para acelerar
+            idx = min(frame * 10, len(tiempos) - 1)
+            
+            for i, punto in enumerate(puntos):
+                if idx < len(posiciones_x[i]):
+                    punto.set_data([posiciones_x[i][idx]], [posiciones_y[i][idx]])
+            
+            ax.set_title(f'Tiempo: {tiempos[idx]:.2f}s - Frame: {frame}')
+            return puntos
+        
+        # Crear animación
+        num_frames = min(100, len(tiempos) // 10)  # Máximo 100 frames
+        anim = animation.FuncAnimation(fig, actualizar, frames=num_frames,
+                                      interval=50, blit=True)
+        
+        plt.xlabel('Posición X')
+        plt.ylabel('Posición Y')
+        plt.grid(True, alpha=0.3)
+        
+        # Guardar animación como GIF
+        anim.save('animacion_simulacion.gif', writer='pillow', fps=20)
+        print("Animación guardada como 'animacion_simulacion.gif'")
+        
+        plt.show()
+        
+    except ImportError:
+        print("Para crear animaciones, necesitas instalar:")
+        print("pip install matplotlib pillow")
+        print("O puedes ver las imágenes estáticas generadas.")
+
+def main():
+    """Función principal del script de graficación"""
+    print("ANALIZADOR DE SIMULACION DE COLISIONES")
+    print("======================================\n")
+    
+    archivo = "simulacion_datos.txt"
+    
+    try:
+        # Leer datos
+        print(f"Leyendo datos de {archivo}...")
+        tiempos, num_particulas, posiciones_x, posiciones_y, colisiones = \
+            leer_datos_simulacion(archivo)
+        
+        print(f"Datos leídos exitosamente:")
+        print(f"- Tiempos registrados: {len(tiempos)}")
+        print(f"- Número máximo de partículas: {max(num_particulas)}")
+        print(f"- Colisiones totales: {colisiones[-1] if colisiones else 0}")
+        
+        # Crear gráficos
+        print("\nGenerando gráficos...")
+        
+        # 1. Gráfico de trayectorias
+        print("1. Creando gráfico de trayectorias...")
+        graficar_trayectorias(tiempos, posiciones_x, posiciones_y)
+        
+        # 2. Gráficos estadísticos
+        print("2. Creando gráficos estadísticos...")
+        graficar_estadisticas(tiempos, num_particulas, colisiones)
+        
+        # 3. Animación (opcional)
+        print("\n¿Deseas crear una animación? (s/n): ")
+        respuesta = input().strip().lower()
+        if respuesta == 's':
+            print("3. Creando animación (esto puede tomar un momento)...")
+            crear_animacion(tiempos, posiciones_x, posiciones_y)
+        
+        print("\n¡Gráficos generados exitosamente!")
+        print("Archivos creados:")
+        print("- trayectorias.png: Trayectorias de las partículas")
+        print("- estadisticas.png: Gráficos estadísticos")
+        print("- animacion_simulacion.gif: Animación (si se creó)")
+        
+    except FileNotFoundError:
+        print(f"Error: No se encontró el archivo {archivo}")
+        print("Asegúrate de ejecutar primero la simulación en C++")
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    main()

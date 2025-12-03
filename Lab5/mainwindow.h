@@ -21,14 +21,11 @@ protected:
 
 private slots:
     void actualizarInterfaz();
-    void agregarLog(const QString& mensaje);
 
 private:
     Ui::MainWindow *ui;
     Juego* juego;
     EscenaJuego* escenaJuego;
-
-    void configurarJuego();
 };
 
 #endif

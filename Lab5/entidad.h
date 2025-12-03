@@ -3,6 +3,7 @@
 
 #include <QColor>
 #include <QString>
+#include <QRectF>
 
 class Entidad {
 public:
@@ -37,7 +38,11 @@ public:
     void setVelocidad(double vx, double vy) { this->vx = vx; this->vy = vy; }
     void setColor(QColor color) { this->color = color; }
     void setTipo(Tipo tipo) { this->tipo = tipo; }
-    void setRadio(double radio) { this->ancho = radio * 2; this->alto = radio * 2; }
+    void setRadio(double radio) {
+        this->ancho = radio * 2;
+        this->alto = radio * 2;
+        this->radio = radio;
+    }
     void setPropietario(int propietario) { this->propietario = propietario; }
     int getPropietario() const { return propietario; }
 
@@ -47,12 +52,20 @@ public:
     void desactivar() { activa = false; }
     void activar() { activa = true; }
 
-    // Colisiones
+    // Colisiones - MÉTODOS MEJORADOS
     bool colisionaCon(const Entidad& otra) const;
     bool contienePunto(double px, double py) const;
 
+    // NUEVO: Para detección específica
+    bool colisionaCirculoConRectangulo(const Entidad& rectangulo) const;
+    bool colisionaRectanguloConCirculo(const Entidad& circulo) const;
+    QRectF getBoundingBox() const;
+
     // Propiedades específicas
-    double getRadio() const { return std::min(ancho, alto) / 2.0; }
+    double getRadio() const {
+        if (radio > 0) return radio;
+        return std::min(ancho, alto) / 2.0;
+    }
     bool esProyectil() const { return tipo == TIPO_PROYECTIL; }
     bool esJugador() const { return tipo == TIPO_JUGADOR; }
     bool esDefensa() const { return tipo == TIPO_DEFENSA; }
@@ -68,6 +81,7 @@ private:
     double x = 0, y = 0;
     double vx = 0, vy = 0;
     double ancho = 0, alto = 0;
+    double radio = 0;  // NUEVO: radio explícito
     QColor color = Qt::gray;
     int vida = 100;
     int vidaMaxima = 100;
