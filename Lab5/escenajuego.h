@@ -4,20 +4,13 @@
 #include <QWidget>
 #include <QTimer>
 
-// Incluir infraestructura.h ANTES de declarar la clase
-#include "infraestructura.h"
-
 // Declaraciones anticipadas
 class Juego;
 class QPainter;
+class Entidad;
 
 class EscenaJuego : public QWidget {
     Q_OBJECT
-
-private:
-    Juego* juego;
-    QTimer* timerAnimacion;
-    bool animacionActiva;
 
 public:
     explicit EscenaJuego(QWidget *parent = nullptr);
@@ -34,11 +27,19 @@ private slots:
     void actualizarAnimacion();
 
 private:
-    void dibujarDefensas(QPainter &painter);
-    void dibujarBarraResistencia(QPainter &painter, const Infraestructura& defensa);
-    void dibujarCaja(QPainter &painter);
-    void dibujarInformacion(QPainter &painter);
+    // Métodos de dibujo
+    void dibujarFondo(QPainter& painter);
+    void dibujarJugador(QPainter &painter, const Entidad& jugador);
     void dibujarProyectil(QPainter &painter);
+    void dibujarDefensas(QPainter &painter);
+    void dibujarBarraResistencia(QPainter &painter, const Entidad& defensa);
+    void dibujarInformacion(QPainter &painter);
+    void dibujarCaja(QPainter &painter);
+
+    // Referencias
+    Juego* juego;
+    QTimer* timerAnimacion;
+    bool animacionActiva;
 };
 
 #endif

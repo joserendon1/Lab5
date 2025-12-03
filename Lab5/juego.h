@@ -1,77 +1,76 @@
 #ifndef JUEGO_H
 #define JUEGO_H
 
-#include "jugador.h"
-#include "proyectil.h"
+#include "entidad.h"
 #include <vector>
-#include <memory>
-
-enum EstadoJuego {
-    CONFIGURANDO_DISPARO,
-    PROYECTIL_EN_VUELO,
-    TURNO_COMPLETADO,
-    JUEGO_TERMINADO
-};
+#include <optional>
 
 class Juego {
-private:
-    // Escenario - DIMENSIONES AJUSTADAS
-    double anchoEscenario;
-    double altoEscenario;
-
-    // Jugadores
-    Jugador jugador1;
-    Jugador jugador2;
-
-    // Estado del juego
-    int turno;
-    Jugador* jugadorActual;
-    EstadoJuego estado;
-
-    // Proyectil
-    std::unique_ptr<Proyectil> proyectilActual;
-
-    // Configuración física
-    double gravedad;
-    double coeficienteRestitucion;
-    double resistenciaParedes;
-
 public:
-    // CONSTRUCTOR CON DIMENSIONES MÁS GRANDES
-    Juego(double ancho = 1200.0, double alto = 600.0);
+    enum Estado {
+        CONFIGURANDO_DISPARO,
+        PROYECTIL_EN_VUELO,
+        TURNO_COMPLETADO,
+        JUEGO_TERMINADO
+    };
 
-    // Configuración inicial
-    void inicializarEscenario();
+    Juego(double ancho = 1200, double alto = 600);
 
-    // Control de juego
-    bool prepararDisparo(double angulo, double potencia, double masaProyectil = 5.0);
+    // Getters
+    Estado getEstado() const { return estado; }
+    int getTurno() const { return turno; }
+    Entidad* getJugadorActual();
+    Entidad* getJugador1() { return jugadorActual == &jugador1 ? &jugador1 : &jugador2; }
+    Entidad* getJugador2() { return jugadorActual == &jugador1 ? &jugador2 : &jugador1; }
+    double getAnchoEscenario() const { return anchoEscenario; }
+    double getAltoEscenario() const { return altoEscenario; }
+    Entidad* getProyectilActual();
+
+    // Métodos para mantener compatibilidad temporal
+    bool prepararDisparo(double angulo, double potencia, double masa = 10.0);
     void actualizar(double dt);
     void finalizarTurno();
 
-    // Consultas
-    Jugador* getJugadorActual() { return jugadorActual; }
-    Jugador* getJugador1() { return &jugador1; }
-    Jugador* getJugador2() { return &jugador2; }
-    int getTurno() const { return turno; }
-    EstadoJuego getEstado() const { return estado; }
-    Proyectil* getProyectilActual() { return proyectilActual.get(); }
-    double getAnchoEscenario() const { return anchoEscenario; }
-    double getAltoEscenario() const { return altoEscenario; }
-
-    bool verificarFinJuego() const;
-    Jugador* obtenerGanador() const;
-
-    // Verificación de colisiones
-    bool verificarColisionProyectilJugador(const Proyectil& p, Jugador& jugador);
-    bool verificarColisionProyectilDefensas(Proyectil& p, Jugador& jugador);
-    bool verificarColisionConParedes(const Proyectil& p) const;
-    void manejarColisionPared(Proyectil& p);
-    void manejarColisionDefensa(Proyectil& p, Infraestructura& defensa);
-
-    // Configuración física
+    // Métodos originales que necesitan mantenerse
     void setGravedad(double g) { gravedad = g; }
     void setCoeficienteRestitucion(double cr) { coeficienteRestitucion = cr; }
-    void setResistenciaParedes(double r) { resistenciaParedes = r; }
+
+    bool verificarFinJuego() const;
+    Entidad* obtenerGanador();
+
+    // Para mantener compatibilidad con el dibujo
+    std::vector<Entidad>& getDefensasJugador1() { return defensasJugador1; }
+    std::vector<Entidad>& getDefensasJugador2() { return defensasJugador2; }
+
+    // Método auxiliar para obtener jugador por número
+    Entidad* getJugador(int numero);
+
+private:
+    // Estado del juego
+    double anchoEscenario, altoEscenario;
+    int turno = 1;
+    Estado estado = CONFIGURANDO_DISPARO;
+
+    // Entidades principales
+    Entidad jugador1;
+    Entidad jugador2;
+    Entidad* jugadorActual;
+
+    std::vector<Entidad> defensasJugador1;
+    std::vector<Entidad> defensasJugador2;
+    std::optional<Entidad> proyectilActual;
+
+    // Física
+    double gravedad = 9.8;
+    double coeficienteRestitucion = 0.7;
+
+    // Métodos privados
+    void inicializarEscenario();
+    bool verificarColisionConParedes(const Entidad& entidad) const;
+    void manejarColisionPared(Entidad& entidad);
+    bool verificarColisionConDefensas(Entidad& proyectil, int jugadorObjetivo);
+    void manejarColisionDefensa(Entidad& proyectil, Entidad& defensa);
+    void aplicarGravedad(Entidad& entidad, double dt);
 };
 
 #endif

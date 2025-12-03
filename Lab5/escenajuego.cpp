@@ -1,11 +1,12 @@
 #include "escenajuego.h"
 #include "juego.h"
-#include "infraestructura.h"
+#include "entidad.h"
 #include <QPainter>
 #include <QPen>
 #include <QBrush>
 #include <QFont>
 #include <QDebug>
+#include <cmath>
 
 EscenaJuego::EscenaJuego(QWidget *parent)
     : QWidget(parent), juego(nullptr), animacionActiva(false) {
@@ -71,12 +72,12 @@ void EscenaJuego::paintEvent(QPaintEvent *event) {
     painter.setPen(QPen(Qt::black, 2));
     painter.drawLine(0, sueloY, juego->getAnchoEscenario(), sueloY);
 
-    // Dibujar defensas (estructuras)
+    // Dibujar defensas
     dibujarDefensas(painter);
 
     // Dibujar jugadores
-    juego->getJugador1()->dibujar(painter);
-    juego->getJugador2()->dibujar(painter);
+    dibujarJugador(painter, *juego->getJugador1());
+    dibujarJugador(painter, *juego->getJugador2());
 
     // Dibujar proyectil si existe
     dibujarProyectil(painter);
@@ -87,11 +88,45 @@ void EscenaJuego::paintEvent(QPaintEvent *event) {
     dibujarInformacion(painter);
 }
 
+void EscenaJuego::dibujarJugador(QPainter &painter, const Entidad& jugador) {
+    if (!jugador.estaActiva()) return;
+
+    painter.save();
+
+    // Dibujar cuerpo del jugador (círculo)
+    painter.setBrush(QBrush(jugador.getColor()));
+    painter.setPen(QPen(Qt::black, 2));
+    double radio = jugador.getRadio();
+    painter.drawEllipse(QPointF(jugador.getX(), jugador.getY()), radio, radio);
+
+    // Dibujar cañón
+    double angulo = jugador.getAnguloCanon();
+    double radianes = angulo * M_PI / 180.0;
+    double canonLength = 30.0;
+
+    double endX, endY;
+    if (jugador.getPropietario() == 1) {
+        // Jugador 1: cañón apunta hacia la derecha
+        endX = jugador.getX() + canonLength * cos(radianes);
+        endY = jugador.getY() - canonLength * sin(radianes);
+    } else {
+        // Jugador 2: cañón apunta hacia la izquierda
+        endX = jugador.getX() - canonLength * cos(radianes);
+        endY = jugador.getY() - canonLength * sin(radianes);
+    }
+
+    painter.setPen(QPen(Qt::black, 4));
+    painter.drawLine(QPointF(jugador.getX(), jugador.getY()),
+                     QPointF(endX, endY));
+
+    painter.restore();
+}
+
 void EscenaJuego::dibujarDefensas(QPainter &painter) {
     if (!juego) return;
 
     // Dibujar defensas del jugador 1
-    for (const auto& defensa : juego->getJugador1()->getDefensas()) {
+    for (const auto& defensa : juego->getDefensasJugador1()) {
         if (defensa.estaDestruida()) continue;
 
         QRectF rect(defensa.getX(), defensa.getY(),
@@ -99,7 +134,7 @@ void EscenaJuego::dibujarDefensas(QPainter &painter) {
 
         // Color con opacidad si tiene poca vida
         QColor color = defensa.getColor();
-        double porcentaje = defensa.getPorcentajeResistencia();
+        double porcentaje = static_cast<double>(defensa.getVida()) / defensa.getVidaMaxima();
         if (porcentaje < 0.3) {
             color.setAlpha(150); // Semi-transparente si está dañada
         }
@@ -113,14 +148,14 @@ void EscenaJuego::dibujarDefensas(QPainter &painter) {
     }
 
     // Dibujar defensas del jugador 2
-    for (const auto& defensa : juego->getJugador2()->getDefensas()) {
+    for (const auto& defensa : juego->getDefensasJugador2()) {
         if (defensa.estaDestruida()) continue;
 
         QRectF rect(defensa.getX(), defensa.getY(),
                     defensa.getAncho(), defensa.getAlto());
 
         QColor color = defensa.getColor();
-        double porcentaje = defensa.getPorcentajeResistencia();
+        double porcentaje = static_cast<double>(defensa.getVida()) / defensa.getVidaMaxima();
         if (porcentaje < 0.3) {
             color.setAlpha(150);
         }
@@ -136,7 +171,7 @@ void EscenaJuego::dibujarDefensas(QPainter &painter) {
 void EscenaJuego::dibujarProyectil(QPainter &painter) {
     if (!juego) return;
 
-    Proyectil* proyectil = juego->getProyectilActual();
+    Entidad* proyectil = juego->getProyectilActual();
     if (!proyectil || !proyectil->estaActiva()) return;
 
     double x = proyectil->getX();
@@ -144,16 +179,12 @@ void EscenaJuego::dibujarProyectil(QPainter &painter) {
     double radio = proyectil->getRadio();
 
     QColor color = proyectil->getColor();
-    if (proyectil->haImpactado()) {
-        color = Qt::darkGray; // Cambiar color después del impacto
-    }
-
     painter.setBrush(QBrush(color));
     painter.setPen(QPen(Qt::black, 1));
     painter.drawEllipse(QPointF(x, y), radio, radio);
 }
 
-void EscenaJuego::dibujarBarraResistencia(QPainter &painter, const Infraestructura& defensa) {
+void EscenaJuego::dibujarBarraResistencia(QPainter &painter, const Entidad& defensa) {
     // Barra de resistencia más pequeña
     QRectF barraRect(defensa.getX(), defensa.getY() - 12,
                      defensa.getAncho(), 8);
@@ -164,7 +195,7 @@ void EscenaJuego::dibujarBarraResistencia(QPainter &painter, const Infraestructu
     painter.drawRect(barraRect);
 
     // Relleno según resistencia
-    double porcentaje = defensa.getPorcentajeResistencia();
+    double porcentaje = static_cast<double>(defensa.getVida()) / defensa.getVidaMaxima();
     QRectF barraRelleno(defensa.getX(), defensa.getY() - 12,
                         defensa.getAncho() * porcentaje, 8);
 
@@ -205,13 +236,13 @@ void EscenaJuego::dibujarInformacion(QPainter &painter) {
     // Información simple en la esquina superior izquierda
     QString info = QString("Turno: %1 - Jugador %2 - Ángulo: %3°")
                        .arg(juego->getTurno())
-                       .arg(juego->getJugadorActual()->getNumero())
+                       .arg(juego->getJugadorActual()->getPropietario())
                        .arg(static_cast<int>(juego->getJugadorActual()->getAnguloCanon()));
 
     // Fondo semitransparente para el texto
     painter.setBrush(QBrush(QColor(255, 255, 255, 200)));
     painter.setPen(Qt::NoPen);
-    painter.drawRect(5, 5, 300, 30);
+    painter.drawRect(5, 5, 350, 30);
 
     // Texto
     painter.setPen(Qt::black);
@@ -223,19 +254,19 @@ void EscenaJuego::dibujarInformacion(QPainter &painter) {
 
     QString estadoTexto;
     switch (juego->getEstado()) {
-    case CONFIGURANDO_DISPARO:
+    case Juego::CONFIGURANDO_DISPARO:
         estadoTexto = "← W/D PARA ÁNGULO | ESPACIO PARA DISPARAR →";
         painter.setPen(Qt::darkBlue);
         break;
-    case PROYECTIL_EN_VUELO:
+    case Juego::PROYECTIL_EN_VUELO:
         estadoTexto = "PROYECTIL EN VUELO";
         painter.setPen(Qt::green);
         break;
-    case TURNO_COMPLETADO:
+    case Juego::TURNO_COMPLETADO:
         estadoTexto = "← PRESIONA N PARA SIGUIENTE TURNO →";
         painter.setPen(Qt::blue);
         break;
-    case JUEGO_TERMINADO:
+    case Juego::JUEGO_TERMINADO:
         estadoTexto = "¡JUEGO TERMINADO! - R PARA REINICIAR";
         painter.setPen(Qt::red);
         break;
@@ -256,7 +287,7 @@ void EscenaJuego::actualizarAnimacion() {
     update();
 
     // Verificar si terminó el movimiento
-    if (juego->getEstado() != PROYECTIL_EN_VUELO) {
+    if (juego->getEstado() != Juego::PROYECTIL_EN_VUELO) {
         detenerAnimacion();
     }
 }

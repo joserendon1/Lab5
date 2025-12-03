@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "juego.h"
 #include <QMessageBox>
 #include <QDebug>
 #include <QTime>
@@ -62,7 +63,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
 
     switch (event->key()) {
     case Qt::Key_W:
-        if (juego->getEstado() == CONFIGURANDO_DISPARO) {
+        if (juego->getEstado() == Juego::CONFIGURANDO_DISPARO) {
             // Aumentar ángulo
             double angulo = juego->getJugadorActual()->getAnguloCanon();
             angulo += 5.0;
@@ -74,7 +75,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         break;
 
     case Qt::Key_D:
-        if (juego->getEstado() == CONFIGURANDO_DISPARO) {
+        if (juego->getEstado() == Juego::CONFIGURANDO_DISPARO) {
             // Disminuir ángulo
             double angulo = juego->getJugadorActual()->getAnguloCanon();
             angulo -= 5.0;
@@ -86,15 +87,14 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         break;
 
     case Qt::Key_Space:
-        if (juego->getEstado() == CONFIGURANDO_DISPARO) {
+        if (juego->getEstado() == Juego::CONFIGURANDO_DISPARO) {
             // Lanzar proyectil con ángulo actual
             double angulo = juego->getJugadorActual()->getAnguloCanon();
             double potencia = 70.0; // Potencia fija más alta (70%)
-            double masa = 10.0; // Masa fija
 
             agregarLog(QString("Disparando: Ángulo=%1°, Potencia=%2%").arg(angulo).arg(potencia));
 
-            if (juego->prepararDisparo(angulo, potencia, masa)) {
+            if (juego->prepararDisparo(angulo, potencia, 10.0)) {
                 agregarLog("¡PROYECTIL LANZADO!");
 
                 // Iniciar animación
@@ -105,20 +105,20 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         break;
 
     case Qt::Key_N:
-        if (juego->getEstado() == TURNO_COMPLETADO) {
+        if (juego->getEstado() == Juego::TURNO_COMPLETADO) {
             juego->finalizarTurno();
 
             if (juego->verificarFinJuego()) {
-                Jugador* ganador = juego->obtenerGanador();
+                Entidad* ganador = juego->obtenerGanador();
                 if (ganador) {
-                    QString mensaje = QString("¡JUGADOR %1 GANA!").arg(ganador->getNumero());
+                    QString mensaje = QString("¡JUGADOR %1 GANA!").arg(ganador->getPropietario());
                     QMessageBox::information(this, "Fin del Juego", mensaje);
                     agregarLog("FIN DEL JUEGO: " + mensaje);
                 }
-            } else if (juego->getEstado() == CONFIGURANDO_DISPARO) {
+            } else if (juego->getEstado() == Juego::CONFIGURANDO_DISPARO) {
                 QString log = QString("Turno %1 - Jugador %2 listo para disparar")
                 .arg(juego->getTurno())
-                    .arg(juego->getJugadorActual()->getNumero());
+                    .arg(juego->getJugadorActual()->getPropietario());
                 agregarLog(log);
             }
             actualizarInterfaz();
@@ -131,7 +131,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
                                   QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
             // Reiniciar juego
             delete juego;
-            juego = new Juego();
+            juego = new Juego(1200, 600);
             escenaJuego->setJuego(juego);
             configurarJuego();
 
@@ -148,7 +148,7 @@ void MainWindow::actualizarInterfaz() {
     // Actualizar título de la ventana con información del turno
     QString titulo = QString("Juego de Estrategia - Turno %1 - Jugador %2")
                          .arg(juego->getTurno())
-                         .arg(juego->getJugadorActual()->getNumero());
+                         .arg(juego->getJugadorActual()->getPropietario());
     setWindowTitle(titulo);
 
     // Forzar redibujado de la escena
